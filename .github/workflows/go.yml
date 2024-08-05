@@ -22,6 +22,7 @@ jobs:
       uses: golangci/golangci-lint-action@v3
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
+        output-format: colored-line-number
     
     - name: Lint code
       run: golangci-lint run
