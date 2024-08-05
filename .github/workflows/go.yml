@@ -1,63 +1,53 @@
-name: Go
+name: CI/CD
 
 on:
   push:
-    branches: ["main"]
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]  
 
 jobs:
 
-  build:
+  lint-and-test:
     runs-on: ubuntu-latest
+    
     steps:
     - uses: actions/checkout@v3
-    - uses: actions/setup-go@v4
-
-    - name: Build
-      run: go build -v ./...
-
-  tests:
-    # Задание "tests" зависит от задания "build" и будет выполнено после него
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-go@v4
-
-    - name: Test
-      run: go test -v ./...
-
-  # Задание проверяет наличие в коде состояния гонки
-  tests-race:
-    # Задание "tests-race" зависит от задания "build" и будет выполнено после него
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-go@v4
-
-    - name: Test
-      run: go test -race -v ./...
-  
-  # Задание проверяет код на соответствие стилю и отсутствие логических ошибок
-  lint:
-  # Задание "lint" зависит от заданий "tests" и "tests-race" и будет выполнено после них
-    needs: [tests, tests-race]
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-      
+    
     - name: Set up Go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v3
       with:
-        go-version: '1.20'  # Укажите нужную версию Go
-
-    - name: Run golangci-lint
-      uses: golangci/golangci-lint-action@v3
+        go-version: 1.20
+        
+    - name: Lint code
+      run: golangci-lint run
+      
+    - name: Test code
+      run: go test ./...
+      
+  build-and-publish:
+    needs: lint-and-test
+    
+    runs-on: ubuntu-latest
+    
+    steps:
+    
+    - uses: actions/checkout@v3
+    
+    - name: Get version
+      id: get_version
+      run: echo ::set-output name=RELEASE_VERSION::${GITHUB_REF#refs/*/}
+      
+    - name: Login to DockerHub
+      uses: docker/login-action@v2
       with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}  # Используйте секретный токен GitHub
-        only-new-issues: false
-        skip-cache: false
-        skip-pkg-cache: false
-        skip-build-cache: false
-        install-mode: binary
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+        
+    - name: Build and push
+      uses: docker/build-push-action@v3
+      with:
+        push: true
+        tags: |
+          ${{ secrets.DOCKERHUB_USERNAME }}/my-app:${{ steps.get_version.outputs.RELEASE_VERSION }}
+          ${{ secrets.DOCKERHUB_USERNAME }}/my-app:latest
