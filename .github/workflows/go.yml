@@ -54,5 +54,5 @@ jobs:
       with:
         push: true
         tags: |
-          ${{ secrets.DOCKERHUB_USERNAME }}/my-app:${{ steps.get_version.outputs.RELEASE_VERSION }}
-          ${{ secrets.DOCKERHUB_USERNAME }}/my-app:latest
+          ${{ secrets.DOCKERHUB_NAME }}/my-app:${{ steps.get_version.outputs.RELEASE_VERSION }}
+          ${{ secrets.DOCKERHUB_NAME }}/my-app:latest
